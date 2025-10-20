@@ -17,7 +17,7 @@ for %%i in (wuauserv, UsoSvc, uhssvc, WaaSMedicSvc) do (
 	sc config %%i start= disabled
 	sc failure %%i reset= 0 actions= ""
 	net stop %%i
-	sc query %%i | find "STOPPED" || (timeout /t 2 & goto retry)
+	(sc query %%i | find "RUNNING" || sc query %%i | find "STOP_PENDING") && timeout /t 2 && goto retry
 )
 
 :: Brute force rename services
