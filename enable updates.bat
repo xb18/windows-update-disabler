@@ -1,9 +1,15 @@
 :: Author: tsgrgo
 :: Re-enable Windows auto updates and undo all changes by 'disable updates.bat'
-:: PsExec is required to get system privileges - it should be in this directory
 
+:: Get admin and system privileges
 if not "%1"=="admin" (powershell start -verb runas '%0' admin & exit /b)
-if not "%2"=="system" (powershell . '%~dp0\PsExec.exe' /accepteula -i -s -d '%0' admin system & exit /b)
+if not "%2"=="system" (
+	mode con: cols=120 && powershell -NoProfile -Command "$host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(120,30)"
+	schtasks /Create /tn "%~nx0" /tr "'%~f0' admin system > '%temp%\%~nx0' && timeout /t 1 && del '%temp%\%~nx0'" /sc ONCE /st 00:00 /rl HIGHEST /f /ru SYSTEM
+	schtasks /Run /tn "%~nx0" && schtasks /Delete /tn "%~nx0" /f
+	powershell -NoProfile -Command "Get-Content '%temp%\%~nx0'; Get-Content '%temp%\%~nx0' -Wait -Tail 0 -ErrorAction SilentlyContinue"
+	pause && exit /b
+)
 
 :: Enable update related services
 sc config wuauserv start= auto
@@ -34,4 +40,3 @@ powershell -NoProfile -Command $paths = @( ^
 foreach ($path in $paths) { Get-ScheduledTask -TaskPath $path ^| Enable-ScheduledTask -ErrorAction SilentlyContinue }
 
 echo Finished
-pause
